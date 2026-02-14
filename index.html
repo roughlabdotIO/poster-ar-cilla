@@ -1,23 +1,22 @@
 <!DOCTYPE html>
 <html>
-
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <title>Poster AR - Cilla</title>
-
+    
     <!-- Mind-AR Libraries -->
     <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-
+    
     <style>
         body {
             margin: 0;
             overflow: hidden;
             font-family: Arial, sans-serif;
         }
-
+        
         .loading-screen {
             position: fixed;
             top: 0;
@@ -32,12 +31,12 @@
             z-index: 9999;
             transition: opacity 0.5s;
         }
-
+        
         .loading-screen.hidden {
             opacity: 0;
             pointer-events: none;
         }
-
+        
         .spinner {
             border: 4px solid rgba(255, 255, 255, 0.3);
             border-top: 4px solid white;
@@ -47,24 +46,19 @@
             animation: spin 1s linear infinite;
             margin-bottom: 20px;
         }
-
+        
         @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
-
+        
         .loading-text {
             color: white;
             font-size: 18px;
             text-align: center;
             padding: 0 20px;
         }
-
+        
         .instructions {
             position: fixed;
             bottom: 30px;
@@ -80,11 +74,11 @@
             max-width: 80%;
             backdrop-filter: blur(10px);
         }
-
+        
         .instructions.hidden {
             display: none;
         }
-
+        
         .ar-status {
             position: fixed;
             top: 20px;
@@ -98,9 +92,41 @@
             z-index: 1000;
             backdrop-filter: blur(10px);
         }
-
+        
         .ar-status.tracking {
             background: rgba(76, 175, 80, 0.9);
+        }
+
+        /* AUDIO BUTTON */
+        .audio-button {
+            position: fixed;
+            bottom: 100px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 87, 34, 0.9);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            cursor: pointer;
+            font-size: 28px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            transition: all 0.3s;
+        }
+
+        .audio-button:hover {
+            transform: scale(1.1);
+        }
+
+        .audio-button.active {
+            background: rgba(76, 175, 80, 0.9);
+        }
+
+        .audio-button.hidden {
+            display: none;
         }
     </style>
 </head>
@@ -127,46 +153,87 @@
         📱 Inquadra il poster per vedere l'animazione
     </div>
 
+    <!-- Audio Button -->
+    <div class="audio-button" id="audioButton" title="Attiva/Disattiva Audio">
+        🔇
+    </div>
+
     <!-- Mind-AR Scene -->
     <a-scene
         mindar-image="imageTargetSrc: ./markers/targets.mind; filterMinCF:0.0001; filterBeta: 0.01; warmupTolerance: 5; missTolerance: 5"
         color-space="sRGB"
         renderer="colorManagement: true; physicallyCorrectLights: true; logarithmicDepthBuffer: true;"
-        vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
-
+        vr-mode-ui="enabled: false"
+        device-orientation-permission-ui="enabled: false">
+        
         <!-- Assets -->
         <a-assets>
             <!-- Video -->
-            <video id="video-animazione" src="./video/animazione.mp4" preload="auto" loop="true" crossorigin="anonymous"
-                playsinline webkit-playsinline muted="false">
+            <video
+                id="video-animazione"
+                src="./video/animazione.mp4"
+                preload="auto"
+                loop="true"
+                crossorigin="anonymous"
+                playsinline
+                webkit-playsinline
+                muted="true">
             </video>
         </a-assets>
-
+        
         <!-- Camera -->
         <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-
+        
         <!-- Target Entity (il poster) -->
         <a-entity id="target" mindar-image-target="targetIndex: 0">
-
+            
             <!-- Video Plane - Formato Verticale -->
-            <a-video id="video-plane" src="#video-animazione" position="0 0 0" rotation="0 0 0" width="0.75" height="1"
-                opacity="1" play-on-visible>
+            <a-video
+                id="video-plane"
+                src="#video-animazione"
+                position="0 0 0"
+                rotation="0 0 0"
+                width="0.75"
+                height="1"
+                opacity="1"
+                play-on-visible>
             </a-video>
-
+            
         </a-entity>
     </a-scene>
-
+    
     <!-- Scripts -->
     <script>
+        // Audio Control
+        let audioEnabled = false;
+        const audioButton = document.getElementById('audioButton');
+        const video = document.querySelector('#video-animazione');
+
+        audioButton.addEventListener('click', function() {
+            audioEnabled = !audioEnabled;
+            video.muted = !audioEnabled;
+            
+            if (audioEnabled) {
+                audioButton.textContent = '🔊';
+                audioButton.classList.add('active');
+                audioButton.title = 'Audio Attivo - Click per disattivare';
+            } else {
+                audioButton.textContent = '🔇';
+                audioButton.classList.remove('active');
+                audioButton.title = 'Audio Disattivo - Click per attivare';
+            }
+        });
+
         // Component per gestire play/pause automatico
         AFRAME.registerComponent('play-on-visible', {
-            init: function () {
+            init: function() {
                 this.video = document.querySelector('#video-animazione');
                 this.target = document.querySelector('#target');
                 this.instructions = document.querySelector('#instructions');
                 this.arStatus = document.querySelector('#arStatus');
+                this.audioBtn = document.querySelector('#audioButton');
                 this.isPlaying = false;
-
+                
                 // Event listeners
                 this.target.addEventListener('targetFound', () => {
                     console.log('Target trovato!');
@@ -174,8 +241,9 @@
                     this.instructions.classList.add('hidden');
                     this.arStatus.textContent = '✓ Tracking attivo';
                     this.arStatus.classList.add('tracking');
+                    this.audioBtn.classList.remove('hidden');
                 });
-
+                
                 this.target.addEventListener('targetLost', () => {
                     console.log('Target perso');
                     this.stopVideo();
@@ -184,15 +252,17 @@
                     this.arStatus.classList.remove('tracking');
                 });
             },
-
-            startVideo: function () {
+            
+            startVideo: function() {
                 if (!this.isPlaying) {
-                    this.video.play();
+                    this.video.play().catch(e => {
+                        console.log('Autoplay prevented:', e);
+                    });
                     this.isPlaying = true;
                 }
             },
-
-            stopVideo: function () {
+            
+            stopVideo: function() {
                 if (this.isPlaying) {
                     this.video.pause();
                     this.video.currentTime = 0; // Reset al inizio
@@ -200,24 +270,23 @@
                 }
             }
         });
-
+        
         // Nascondi loading screen quando la scena è pronta
-        document.querySelector('a-scene').addEventListener('loaded', function () {
-            setTimeout(function () {
+        document.querySelector('a-scene').addEventListener('loaded', function() {
+            setTimeout(function() {
                 document.getElementById('loadingScreen').classList.add('hidden');
             }, 1000);
         });
-
+        
         // Gestione errori
         document.querySelector('a-scene').addEventListener('arError', (event) => {
             console.error('AR Error:', event);
             alert('Errore nel caricamento AR. Verifica di avere dato i permessi alla fotocamera.');
         });
-
+        
         document.querySelector('a-scene').addEventListener('arReady', () => {
             console.log('Mind-AR pronto!');
         });
     </script>
 </body>
-
 </html>
